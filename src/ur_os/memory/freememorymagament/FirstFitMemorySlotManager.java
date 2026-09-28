@@ -39,7 +39,7 @@ public class FirstFitMemorySlotManager extends FreeMemorySlotManager{
         }
         
         //If there is no slot big enough to contain the requested memory, it will return null
-        System.out.println("Error - Memory cannot allocate a slot big enough for the requested memory");
+        System.out.println("Error: Memory cannot allocate a slot big enough for the requested memory");
         return null;
     }
 

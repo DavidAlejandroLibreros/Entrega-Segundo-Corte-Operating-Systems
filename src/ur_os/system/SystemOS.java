@@ -44,7 +44,7 @@ public class SystemOS implements Runnable{
     public static final int SEED_SEGMENTS = 7401;
     public static final int SEED_PROCESS_SIZE = 9630;
     
-    public static final int MEMORY_SIZE = 1_048_576; //1MB
+    public static final int MEMORY_SIZE = 60; //1MB
     public static final int SWAP_MEMORY_SIZE = 1_073_741_824; //1 GB
     
     protected ArrayList<Process> processes;
@@ -62,9 +62,10 @@ public class SystemOS implements Runnable{
         processes = new ArrayList();
         //initSimulationQueue();
         //initSimulationQueueSimple();
-        initSimulationQueueSimpler();
+        //initSimulationQueueSimpler();
         //initSimulationQueueSimpler2();
         //initSimulationQueueSimpler3();
+        initSimulationPropio();
         
 
         showProcesses();
@@ -278,6 +279,45 @@ public class SystemOS implements Runnable{
         
         clock = 0;
     }
+
+    public void initSimulationPropio(){
+    
+    Process p;
+    Instruction temp;
+    
+    p = new Process(0, 0);
+    p.setSize(10);
+    p.addCPUInstructions(1);
+    temp = new MemoryInstruction(MemoryOperationType.STORE, r.nextInt(10), (byte)1, 2);
+    p.addInstruction(temp);
+    p.addCPUInstructions(1);
+    temp = new EndInstruction();
+    p.addInstruction(temp);
+    processes.add(p);
+    
+    p = new Process(1, 1);
+    p.setSize(15);
+    p.addCPUInstructions(2);
+    temp = new MemoryInstruction(MemoryOperationType.STORE, r.nextInt(15), (byte)2, 2);
+    p.addInstruction(temp);
+    p.addCPUInstructions(40);
+    temp = new EndInstruction();
+    p.addInstruction(temp);
+    processes.add(p);
+    
+    p = new Process(2, 10);
+    p.setSize(8);
+    p.addCPUInstructions(1);
+    temp = new MemoryInstruction(MemoryOperationType.STORE, r.nextInt(8), (byte)3, 2);
+    p.addInstruction(temp);
+    p.addCPUInstructions(1);
+    temp = new EndInstruction();
+    p.addInstruction(temp);
+    processes.add(p);
+    
+    clock = 0;
+}
+
     
     
     

@@ -56,7 +56,7 @@ public class OS {
     public static final int MAX_PROCESS_PRIORITY = 10; //Page size in bytes
     public static final int PAGE_SIZE = 64; //Page size in bytes
     public static final MemoryManagerType SMM = MemoryManagerType.CONTIGUOUS;
-    public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.FIRST_FIT;
+    public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.WORST_FIT;
     
     public static final ProcessVirtualMemoryManagerType PVMM = ProcessVirtualMemoryManagerType.LRU;
     public static final int FRAMES_PER_PROCESS = 3; //Maximum number of frames assigned to a process, if virtual memory is on

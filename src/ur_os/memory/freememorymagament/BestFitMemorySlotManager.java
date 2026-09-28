@@ -29,7 +29,7 @@ public class BestFitMemorySlotManager extends FreeMemorySlotManager{
         
         if(best == null){
             //Si ningún slot alcanza, se retorna null
-            System.out.println("Error - La memoria solicitada es demasiado grande para la memoria disponible");
+            System.out.println("Error: La memoria solicitada es demasiado grande para la memoria disponible");
             return null;
             }
 
