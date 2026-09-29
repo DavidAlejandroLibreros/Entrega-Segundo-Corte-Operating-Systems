@@ -281,42 +281,78 @@ public class SystemOS implements Runnable{
     }
 
     public void initSimulationPropio(){
-    
-    Process p;
-    Instruction temp;
-    
-    p = new Process(0, 0);
-    p.setSize(10);
-    p.addCPUInstructions(1);
-    temp = new MemoryInstruction(MemoryOperationType.STORE, r.nextInt(10), (byte)1, 2);
-    p.addInstruction(temp);
-    p.addCPUInstructions(1);
-    temp = new EndInstruction();
-    p.addInstruction(temp);
-    processes.add(p);
-    
-    p = new Process(1, 1);
-    p.setSize(15);
-    p.addCPUInstructions(2);
-    temp = new MemoryInstruction(MemoryOperationType.STORE, r.nextInt(15), (byte)2, 2);
-    p.addInstruction(temp);
-    p.addCPUInstructions(40);
-    temp = new EndInstruction();
-    p.addInstruction(temp);
-    processes.add(p);
-    
-    p = new Process(2, 10);
-    p.setSize(8);
-    p.addCPUInstructions(1);
-    temp = new MemoryInstruction(MemoryOperationType.STORE, r.nextInt(8), (byte)3, 2);
-    p.addInstruction(temp);
-    p.addCPUInstructions(1);
-    temp = new EndInstruction();
-    p.addInstruction(temp);
-    processes.add(p);
-    
-    clock = 0;
-}
+ 
+        Process p;
+        Instruction temp;
+ 
+        
+        p = new Process(0,0);
+        p.setSize(8);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 5, (byte)1, 9); //Store en direccion logica 5, valor 1
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        p = new Process(1,2);
+        p.setSize(14);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 7, (byte)2, 40); //Store en direccion logica 7, valor 2
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        p = new Process(2,4);
+        p.setSize(6);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 2, (byte)3, 9); //Store en direccion logica 2, valor 3
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        p = new Process(3,6);
+        p.setSize(12);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 6, (byte)4, 41); //Store en direccion logica 6, valor 4
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        p = new Process(4,20);
+        p.setSize(5);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 1, (byte)5, 6); //Store en direccion logica 1, valor 5
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        p = new Process(5,24);
+        p.setSize(3);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 2, (byte)6, 12); //Store en direccion logica 2, valor 6
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        clock = 0;
+    }
 
     
     

@@ -55,29 +55,23 @@ public abstract class FreeMemorySlotManager extends FreeMemoryManager{
     }
     
     private void returnMemorySlot(MemorySlot m){
-        
-        
-        int i = 0;
-        //Find the slot with a higher base address than the one inserted
-        while(i<list.size() && list.get(i).getBase() < m.getBase()){
-            i++;
-        }
-        
-        if(i > 0){
-            i--;
-        }
-        
-        if(i == 0 && list.get(i).getBase() > m.getBase()){//If the slot is the highest one
-            list.addFirst(m);
-        }else if (i == list.size()-1){//If the slot is the first
-            list.getLast().addSlot(m);
-        }else{
-            list.add(i+1, m);
-        }
-        
-        fuseSlots();
-        
+
+    if(m == null){
+        return; //El proceso nunca obtuvo slot, no hay nada que devolver
     }
+
+    m = new MemorySlot(m); //Copia: la lista libre no comparte objeto con el PMM del proceso
+
+    //Buscar la posición donde va el slot, manteniendo la lista ordenada por base
+    int i = 0;
+    while(i < list.size() && list.get(i).getBase() < m.getBase()){
+        i++;
+    }
+
+    list.add(i, m); //Sirve al inicio, en medio, al final y con la lista vacía
+
+    fuseSlots(); //Une solo los huecos que quedan pegados
+}
 
     @Override
     public void reclaimMemory(Process p){
