@@ -5,33 +5,33 @@
  */
 package ur_os.system;
 
-import ur_os.memory.contiguous.SMM_Contiguous;
-import ur_os.memory.freememorymagament.FreeFramesManager;
-import ur_os.memory.paging.PMM_Paging;
-import ur_os.memory.ProcessMemoryManager;
-import ur_os.memory.MemoryManagerType;
-import ur_os.process.Process;
-import ur_os.process.planning.ReadyQueue;
-import ur_os.process.ProcessState;
 import java.util.Random;
-import ur_os.memory.freememorymagament.BestFitMemorySlotManager;
-import ur_os.memory.freememorymagament.FirstFitMemorySlotManager;
-import ur_os.memory.freememorymagament.FreeMemoryManager;
-import ur_os.memory.freememorymagament.MemorySlot;
-import ur_os.memory.freememorymagament.FreeMemorySlotManager;
-import ur_os.memory.freememorymagament.WorstFitMemorySlotManager;
-import ur_os.memory.segmentation.PMM_Segmentation;
+import ur_os.memory.MemoryManagerType;
 import static ur_os.memory.MemoryManagerType.CONTIGUOUS;
+import ur_os.memory.ProcessMemoryManager;
 import ur_os.memory.SystemMemoryManager;
 import ur_os.memory.contiguous.PMM_Contiguous;
+import ur_os.memory.contiguous.SMM_Contiguous;
+import ur_os.memory.freememorymagament.BestFitMemorySlotManager;
+import ur_os.memory.freememorymagament.FirstFitMemorySlotManager;
+import ur_os.memory.freememorymagament.FreeFramesManager;
+import ur_os.memory.freememorymagament.FreeMemoryManager;
+import ur_os.memory.freememorymagament.FreeMemorySlotManager;
 import ur_os.memory.freememorymagament.FreeMemorySlotManagerType;
+import ur_os.memory.freememorymagament.MemorySlot;
+import ur_os.memory.freememorymagament.SegregatedFitMemorySlotManager;
+import ur_os.memory.freememorymagament.WorstFitMemorySlotManager;
 import ur_os.memory.paging.MemoryPageExchange;
+import ur_os.memory.paging.PMM_Paging;
 import ur_os.memory.paging.SMM_Paging;
+import ur_os.memory.segmentation.PMM_Segmentation;
 import ur_os.memory.segmentation.SMM_Segmentation;
+import ur_os.process.Process;
+import ur_os.process.ProcessState;
+import ur_os.process.planning.ReadyQueue;
 import static ur_os.system.InterruptType.SCHEDULER_CPU_TO_RQ;
 import static ur_os.system.SystemOS.MAX_PROC_SIZE;
 import ur_os.virtualmemory.*;
-import ur_os.virtualmemory.ProcessVirtualMemoryManagerType;
 import static ur_os.virtualmemory.ProcessVirtualMemoryManagerType.FIFO;
 import static ur_os.virtualmemory.ProcessVirtualMemoryManagerType.LRU;
 
@@ -56,7 +56,7 @@ public class OS {
     public static final int MAX_PROCESS_PRIORITY = 10; //Page size in bytes
     public static final int PAGE_SIZE = 64; //Page size in bytes
     public static final MemoryManagerType SMM = MemoryManagerType.CONTIGUOUS;
-    public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.WORST_FIT;
+    public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.SEGREGATED_FIT;
     
     public static final ProcessVirtualMemoryManagerType PVMM = ProcessVirtualMemoryManagerType.LRU;
     public static final int FRAMES_PER_PROCESS = 3; //Maximum number of frames assigned to a process, if virtual memory is on
@@ -99,6 +99,10 @@ public class OS {
             case WORST_FIT:
                 fmm = new WorstFitMemorySlotManager(SystemOS.MEMORY_SIZE);
                 fvmm = new WorstFitMemorySlotManager(SystemOS.SWAP_MEMORY_SIZE);
+                break;
+            case SEGREGATED_FIT:
+                fmm = new SegregatedFitMemorySlotManager(SystemOS.MEMORY_SIZE);
+                fvmm = new SegregatedFitMemorySlotManager(SystemOS.SWAP_MEMORY_SIZE);
                 break;
             }
         }
