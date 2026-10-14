@@ -19,6 +19,7 @@ import ur_os.process.EndInstruction;
 import ur_os.process.IOInstruction;
 import ur_os.process.Instruction;
 import ur_os.virtualmemory.SwapMemory;
+import ur_os.memory.freememorymagament.FragmentationCalculator;
 
 /**
  *
@@ -472,6 +473,7 @@ public class SystemOS implements Runnable{
             System.out.println("Free Memory Slots ("+os.fmm.getSize()+"): ");
             FreeMemorySlotManager msm = (FreeMemorySlotManager)os.fmm;
             System.out.println(msm);
+            System.out.println("External fragmentation: "+FragmentationCalculator.calcExternalFragmentation(msm));
         }
     }
     
