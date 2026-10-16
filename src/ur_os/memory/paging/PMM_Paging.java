@@ -102,26 +102,32 @@ public class PMM_Paging extends ProcessMemoryManager{
     
     public MemoryAddress getPageMemoryAddressFromLocalAddress(int locAdd){
         
-        //Include your code here
-        
-        
-        return new MemoryAddress(-1, -1);
+        int page = locAdd / OS.PAGE_SIZE;
+        int offset = locAdd % OS.PAGE_SIZE;
+        return new MemoryAddress(page, offset);
     }
     
     public int getFrameMemoryAddressFromLogicalMemoryAddress(int page){
         
-        //Include your code here
+        return pt.getFrameIdFromPage(page);
         
-        return -1;
     }
     
     public MemoryAddress getFrameMemoryAddressFromLogicalMemoryAddress(MemoryAddress m){
         
-        //Include your code here
-        //Return null if the address is not loaded in a frame (just for virtual memory)
-        //Include a memory access to the page that is being accessed and that is loaded
-        
-        return new MemoryAddress(-1, -1);
+        int page = m.getDivision();
+        int frame = getFrameMemoryAddressFromLogicalMemoryAddress(page);
+
+        if(frame == -2){
+            System.out.println("Error - Illegal memory access: page "+page+" does not exist");
+            return new MemoryAddress(-1, 0);
+        }
+        if(frame == -1){
+            return null;
+        }
+
+        addMemoryAccess(page);
+        return new MemoryAddress(frame * OS.PAGE_SIZE, m.getOffset());
     }
     
     
@@ -129,11 +135,11 @@ public class PMM_Paging extends ProcessMemoryManager{
         return getVFrameMemoryAddressFromLogicalMemoryAddress(new MemoryAddress(page, 0)).getDivision();
     }
     
+    
     public MemoryAddress getVFrameMemoryAddressFromLogicalMemoryAddress(MemoryAddress m){
         
-        //Include your code here
-        
-        return new MemoryAddress(-1, -1);
+        int vframe = vpt.getFrameIdFromPage(m.getDivision());
+        return new MemoryAddress(vframe, m.getOffset());
     }
     
    

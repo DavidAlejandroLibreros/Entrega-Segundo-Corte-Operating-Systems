@@ -44,6 +44,11 @@ public class FreeFramesManager extends FreeMemoryManager{
     public int getSize(){
         return freeFrames.size();
     }
+    
+    @Override
+    public String toString(){
+        return freeFrames.toString();
+    }
 
     public void reclaimFrame(int frameID){
         this.freeFrames.add(frameID);

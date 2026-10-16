@@ -469,6 +469,8 @@ public class SystemOS implements Runnable{
     public void showFreeMemory(){
         if(OS.SMM == MemoryManagerType.PAGING){
             System.out.println("Free frame number: "+os.fmm.getSize());
+            System.out.println("Free frames: "+os.fmm);
+            System.out.println("Internal fragmentation: "+FragmentationCalculator.calcInternalFragmentation(processes));
         }else{
             System.out.println("Free Memory Slots ("+os.fmm.getSize()+"): ");
             FreeMemorySlotManager msm = (FreeMemorySlotManager)os.fmm;
