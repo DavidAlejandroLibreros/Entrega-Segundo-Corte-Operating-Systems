@@ -45,7 +45,7 @@ public class SystemOS implements Runnable{
     public static final int SEED_SEGMENTS = 7401;
     public static final int SEED_PROCESS_SIZE = 9630;
     
-    public static final int MEMORY_SIZE = 60; //1MB
+    public static final int MEMORY_SIZE = 512; //1MB
     public static final int SWAP_MEMORY_SIZE = 1_073_741_824; //1 GB
     
     protected ArrayList<Process> processes;
@@ -66,8 +66,8 @@ public class SystemOS implements Runnable{
         //initSimulationQueueSimpler();
         //initSimulationQueueSimpler2();
         //initSimulationQueueSimpler3();
-        initSimulationPropio();
-        
+        //initSimulationPropio();
+        initSimulationPropioPaging();
 
         showProcesses();
         this.simType = simType;
@@ -281,6 +281,8 @@ public class SystemOS implements Runnable{
         clock = 0;
     }
 
+
+    //Para probarlo: 60 = Memory_Size y poner SMM = MemoryManagerType.CONTIGOUS
     public void initSimulationPropio(){
  
         Process p;
@@ -355,7 +357,65 @@ public class SystemOS implements Runnable{
         clock = 0;
     }
 
-    
+
+    // Para ejeuctarlo cambiar: MEMORY_SIZE = 512
+    // SMM = MemoryManagerType.PAGING
+
+    public void initSimulationPropioPaging(){
+ 
+        Process p;
+        Instruction temp;
+ 
+        
+        //Proceso 1
+        p = new Process(0,0);
+        p.setSize(150);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 100, (byte)1, 10); //Store en direccion logica 100, valor 1
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        //Proceso 2
+        p = new Process(1,2);
+        p.setSize(100);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 80, (byte)2, 30); //Store en direccion logica 80, valor 2
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        //Proceso 3
+        p = new Process(2,15);
+        p.setSize(200);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 195, (byte)3, 30); //Store en direccion logica 195, valor 3
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        
+        //Proceso 4
+        p = new Process(3,37);
+        p.setSize(190);
+        p.addCPUInstructions(1);
+        temp = new MemoryInstruction(MemoryOperationType.STORE, 150, (byte)4, 15); //Store en direccion logica 150, valor 4
+        p.addInstruction(temp);
+        p.addCPUInstructions(1);
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        clock = 0;
+    }
     
     
     public boolean isSimulationFinished(){
