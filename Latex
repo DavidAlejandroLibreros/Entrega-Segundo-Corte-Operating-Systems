@@ -1,0 +1,932 @@
+\documentclass[11pt,letterpaper]{article}
+
+% ------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{patterns}
+\usepackage[hyphens]{url}
+\usepackage[hidelinks]{hyperref}
+-
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{UR-OS Simulator}
+\fancyhead[R]{Operating Systems -- Deliverable 4}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ------------------------------------------------------------
+% Java listings style
+% ------------------------------------------------------------
+\lstdefinestyle{java}{
+  language=Java,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!45!black}\itshape,
+  stringstyle=\color{red!65!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!60},
+  backgroundcolor=\color{gray!5},
+  tabsize=4,
+  captionpos=t,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+           {ñ}{{\~n}}1 {Ñ}{{\~N}}1
+}
+\lstset{style=java}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+
+\newcommand{\memaxis}{%
+  \foreach \t in {0,300,400,500,600,1000}{\draw[gray] (\t,0.25) -- (\t,0.4) node[above] {\t};}}
+\newcommand{\memrow}[2]{% #1 = y, #2 = row label
+  \node[anchor=east] at (-15,#1) {#2};
+  \fill[pattern=north east lines,pattern color=gray] (300,#1-0.25) rectangle (400,#1+0.25);
+  \fill[pattern=north east lines,pattern color=gray] (500,#1-0.25) rectangle (600,#1+0.25);
+  \draw (0,#1-0.25) rectangle (1000,#1+0.25);
+  \draw (300,#1-0.25) -- (300,#1+0.25) (400,#1-0.25) -- (400,#1+0.25)
+        (500,#1-0.25) -- (500,#1+0.25) (600,#1-0.25) -- (600,#1+0.25);}
+\newcommand{\slotbox}[5]{% #1 color, #2 start, #3 end, #4 y, #5 size
+  \fill[#1] (#2,#4-0.25) rectangle (#3,#4+0.25);
+  \draw (#2,#4-0.25) rectangle (#3,#4+0.25);
+  \node at ({(#2+#3)/2},#4) {#5};}
+\newcommand{\newslot}[4]{\slotbox{orange!70}{#1}{#2}{#3}{#4}} % allocated in this step
+\newcommand{\oldslot}[4]{\slotbox{blue!25}{#1}{#2}{#3}{#4}}   % allocated in earlier steps
+\newcommand{\hole}[3]{\node[gray!70!black] at (#1,#2) {\textit{#3}};}
+\newcommand{\smallhole}[3]{\node[gray!70!black,above] at (#1,#2+0.2) {\tiny\textit{#3}};}
+
+
+
+\sloppy
+\begin{document}
+
+% ============================================================
+% Title page
+% ============================================================
+\thispagestyle{empty}
+\begin{center}
+\rule{\linewidth}{0.4pt}\\[0.6em]
+{\small Operating Systems}\\[0.6em]
+\rule{\linewidth}{0.4pt}
+\end{center}
+
+\vspace{0.5em}
+\noindent
+\begin{minipage}{0.3\linewidth}
+\IfFileExists{rosario.png}{\includegraphics[width=0.7\linewidth]{logo_vertical_ur_rojo.png}}{}
+\end{minipage}\hfill
+\begin{minipage}{0.3\linewidth}\raggedleft
+\IfFileExists{macc.png}{\includegraphics[width=0.6\linewidth]{macc.png}}{}
+\end{minipage}
+
+\begin{center}
+{\large Universidad del Rosario}\\[1em]
+{\large School of Engineering, Science and Technology}\\
+{\large Operating Systems}\\[2em]
+{\LARGE\bfseries Deliverable 4}\\[0.5em]
+Free Memory Management: Best Fit and Worst Fit\\[2em]
+{\large Valentina Díaz Rocha\textsuperscript{1}, Alejandro Garzon Pulido\textsuperscript{1}, Alejandro Romero Libreros\textsuperscript{1}}\\[0.5em]
+{\small \textsuperscript{1} Universidad del Rosario, School of Engineering, Science and Technology, Bogotá, Colombia}
+\end{center}
+
+\vspace{3em}
+\noindent
+\begin{minipage}[t]{0.42\linewidth}
+\textbf{Article info}\\[0.6em]
+\textbf{Keywords:}\\
+Memory management,\\
+Woest Fit,\\
+Best Fit,\\
+Segmentation (SegmentTable),\\
+Paging (PMM_Paging),\\
+\textbf{Abstract}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.52\linewidth}
+The UR-OS simulator is a Java-based application designed to include all the main active components of a computer system in order to replicate the behavior of an operating system and its interaction with hardware elements such as the processor, memory, and file system. This modular simulator allows users to select and combine different algorithms for each function. This deliverable extends the free memory management function of the simulator -- previously limited to First Fit -- with two new hole-selection strategies for contiguous allocation: \textbf{Best Fit}, which assigns the smallest free hole that is large enough for the request, and \textbf{Worst Fit}, which assigns the largest free hole. Both strategies were integrated into the operating system configuration, validated inside the full simulation, and compared against First Fit on controlled fragmentation scenarios, with every allocation independently verified by a manual, step-by-step trace of the free-hole list.
+\end{minipage}
+
+\newpage
+
+
+\section{Introduction}
+
+\label{sec:introduction}
+
+Main memory is one of the most critical resources an operating system has to manage. Under contiguous allocation, every process must be placed in a single block of consecutive addresses, so the operating system needs to keep track of which memory slots are free and decide which one to use each time a process is created. This decision, taken by the free memory slot manager, determines how efficiently memory is used: a poor choice leaves small, scattered holes that cannot host new processes, a problem known as \textit{external fragmentation}.
+
+This report documents the first deliverable of the \textit{UR-OS -- Main Memory Management} project for the Operating Systems course at Universidad del Rosario. The project extends the UR-OS simulator, written in Java and originally created by Professor Pedro Wightman, so that students can study the main functionalities of memory management by implementing them directly in the simulator. This first deliverable focuses on \textbf{free memory management (slot management)} under contiguous allocation. Memory allocation and mapping techniques, namely paging and segmentation, are left for the second deliverable.
+
+The objectives of this deliverable are the following:
+\begin{itemize}
+    \item Implement the \texttt{FirstFit}, \texttt{BestFit} and \texttt{WorstFit} policies as \texttt{FreeMemorySlotManager}s inside the UR-OS simulator.
+    \item Design our own scenario in which several free slots are available when a process is created, so that the three policies make different decisions and their behavior can be told apart.
+    \item Solve the scenario manually, step by step, and compare those results with the output of the simulator, using screenshots as evidence. This includes checking that each logical address of a \texttt{STORE} operation maps to the physical address expected from the slot chosen by each policy.
+    \item Draw conclusions about the behavior of each policy and about the quality of the implementation.
+\end{itemize}
+
+The rest of the report follows the structure requested for the deliverable. First, we present the source code of the implemented algorithms together with a description of how each one works. Then, we define the scenario and present the manual solution for each policy. Next, we compare these manual results with the simulator results. Finally, we summarize our conclusions.
+
+% TODO: if the team also reports the fragmentation calculation in this deliverable,
+% add a bullet to the list above, e.g.:
+% \item Compute the resulting fragmentation for each policy and compare it across policies.
+\subsection{Memory management model in UR-OS}
+
+Memory management in UR-OS is organized in three cooperating layers. Understanding them is necessary to see exactly where the new strategies act:
+
+\begin{enumerate}
+  \item \textbf{System Memory Manager} (\code{SystemMemoryManager}): translates logical addresses into physical addresses. For contiguous allocation (\code{SMM\_Contiguous}) the translation is the classical base/limit scheme: $\text{physical} = \text{base} + \text{logical}$, and the access is rejected if $\text{logical} \geq \text{limit}$.
+  \item \textbf{Process Memory Manager} (\code{ProcessMemoryManager}): stores, for each process, where it lives in memory. For contiguous allocation (\code{PMM\_Contiguous}) this is a \code{MemorySlot} (base and size) in main memory and another one in swap memory.
+  \item \textbf{Free Memory Manager} (\code{FreeMemoryManager}): keeps track of the free space. For contiguous allocation (and segmentation) it is a \code{FreeMemorySlotManager}, which stores a \code{LinkedList<MemorySlot>} of free holes ordered by base address. When a process is created, \code{OS.create\_process()} requests a hole through \code{getSlot(size)}; when a process finishes, \code{reclaimMemory()} returns its hole to the list and \code{fuseSlots()} merges adjacent holes.
+\end{enumerate}
+
+The abstract method \code{getSlot(int size)} is the only point where the three strategies differ; this is the method implemented in this deliverable for Best Fit and Worst Fit. The simulated main memory has $1\,048\,576$ bytes (1 MB) and the swap memory is managed by an independent free memory manager of the same type.
+
+\subsection{Test scenarios}
+
+Two kinds of tests were performed:
+
+\paragraph{Scenario 0 -- Integration test in the full simulator.} The default simulation scenario of the base simulator (\code{initSimulationQueueSimpler()}) was run once with each strategy (FCFS process scheduling, contiguous allocation, virtual memory off). It defines the following 4 processes:
+
+\begin{table}[H]
+\centering
+\caption{Processes in Scenario 0 (\code{initSimulationQueueSimpler()})}
+\small
+\begin{tabular}{cccccc}
+\toprule
+PID & Arrival & Size (bytes) & Burst 1 (CPU) & Burst 2 (Memory) & Burst 3 (CPU)\\
+\midrule
+P0 & 0 & 975 & 3 & LOAD @796, 4 cycles & 3\\
+P1 & 2 & 200 & 3 & STORE @86 (value 38), 3 cycles & 3\\
+P2 & 6 & 747 & 7 & LOAD @323, 4 cycles & 5\\
+P3 & 8 & 488 & 4 & STORE @303 (value 42), 4 cycles & 7\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Scenarios A and B -- Fragmentation tests.} In Scenario 0 there is only one free hole every time a process is created, so any strategy necessarily picks the same hole. To actually observe the differences between the strategies, a test class (\code{PruebaEstrategias.java}, located in the package \code{ur\_os.memory.freememorymagament}) creates a memory of 1000 bytes that is already fragmented, and then issues a sequence of requests directly to \code{getSlot()} using the real simulator classes. The initial memory map is:
+
+\begin{table}[H]
+\centering
+\caption{Initial memory map for Scenarios A and B (1000 bytes)}
+\begin{tabular}{cccc}
+\toprule
+Region & Addresses & Size (bytes) & State\\
+\midrule
+H1 & $[0, 300)$ & 300 & Free\\
+-- & $[300, 400)$ & 100 & Occupied\\
+H2 & $[400, 500)$ & 100 & Free\\
+-- & $[500, 600)$ & 100 & Occupied\\
+H3 & $[600, 1000)$ & 400 & Free\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Scenario A}: requests of 90, 250, 100, 120 and 180 bytes.
+  \item \textbf{Scenario B}: requests of 150, 200 and 250 bytes.
+\end{itemize}
+
+In both scenarios 800 bytes are free at the beginning, distributed in three holes.
+
+% ============================================================
+\section{Best Fit}
+% ============================================================
+
+\subsection{Design description}
+
+\code{BestFitMemorySlotManager} extends \code{FreeMemorySlotManager} and implements \code{getSlot(int size)}. Rules of the implemented policy:
+
+\begin{enumerate}
+  \item \textbf{Full scan}: the whole list of free holes is traversed; unlike First Fit, the search cannot stop at the first valid hole, because a smaller valid hole may appear later in the list.
+  \item \textbf{Selection}: among the holes that satisfy \code{canContain(size)} (i.e., $\text{hole size} \geq \text{request}$), the one with the \emph{smallest} size is kept. In case of a tie, the first one found (lowest address) is kept, because the comparison is strict (\code{<}).
+  \item \textbf{Exact fit}: if the selected hole has exactly the requested size, it is removed from the free list and returned as the allocated slot.
+  \item \textbf{Split}: if the selected hole is larger, \code{assignMemory(size)} cuts the requested amount from the \emph{beginning} of the hole: it returns a new slot $[\text{base}, \text{base}+\text{size})$ and the hole that remains in the list moves its base forward and shrinks.
+  \item \textbf{Failure}: if no hole is large enough, an error message is printed and \code{null} is returned.
+\end{enumerate}
+
+The rationale of Best Fit is to minimize the leftover produced by each allocation, preserving the large holes for large future requests.
+
+\subsection{Implementation code}
+
+\begin{lstlisting}[caption={BestFitMemorySlotManager.java -- Best Fit strategy}]
+public class BestFitMemorySlotManager extends FreeMemorySlotManager{
+
+    public BestFitMemorySlotManager(int memSize){
+        super(memSize);
+    }
+
+    @Override
+    public MemorySlot getSlot(int size) {
+        MemorySlot best = null;
+
+        //Recorremos toda la lista buscando el slot más pequeño que aún alcance
+        for (MemorySlot memorySlot : list) {
+            if(memorySlot.canContain(size)){
+                if(best == null || memorySlot.getSize() < best.getSize()){
+                    best = memorySlot;
+                }
+            }
+        }
+
+        if(best == null){
+            //Si ningún slot alcanza, se retorna null
+            System.out.println("Error - La memoria solicitada es demasiado grande para la memoria disponible");
+            return null;
+            }
+
+        if(best.getSize() == size){
+            /*Si el tamaño pedido coincide exactamente con el del slot,
+              se remueve el slot completo de la lista y se retorna tal cual*/
+            list.remove(best);
+            return best;
+        }else{
+            /*Si el slot es más grande de lo pedido, se parte: assignMemory
+              actualiza el slot original (que sigue en la lista) y retorna
+              un nuevo MemorySlot con el pedazo asignado*/
+            return best.assignMemory(size);
+        }
+    }
+}
+\end{lstlisting}
+
+The strategy is wired into the operating system in the constructor of \code{OS.java}, which instantiates the free memory manager for main memory (\code{fmm}) and for swap memory (\code{fvmm}) according to the constant \code{MSM}:
+
+\begin{lstlisting}[caption={OS.java -- Selection of the free memory strategy}]
+public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.FIRST_FIT;
+...
+switch(MSM){
+    case FIRST_FIT:
+        fmm = new FirstFitMemorySlotManager(SystemOS.MEMORY_SIZE); //Memory
+        fvmm= new FirstFitMemorySlotManager(SystemOS.SWAP_MEMORY_SIZE); //Swap memory
+        break;
+    case BEST_FIT:
+        fmm = new BestFitMemorySlotManager(SystemOS.MEMORY_SIZE);
+        fvmm = new BestFitMemorySlotManager(SystemOS.SWAP_MEMORY_SIZE);
+        break;
+    case WORST_FIT:
+        fmm = new WorstFitMemorySlotManager(SystemOS.MEMORY_SIZE);
+        fvmm = new WorstFitMemorySlotManager(SystemOS.SWAP_MEMORY_SIZE);
+        break;
+}
+\end{lstlisting}
+
+The enumeration \code{FreeMemorySlotManagerType} was extended with the values \code{BEST\_FIT} and \code{WORST\_FIT}.
+
+\subsection{Step-by-step description of the code}
+
+\begin{itemize}
+  \item \textbf{Constructor}: delegates to \code{FreeMemorySlotManager(memSize)}, which initializes the free list with a single hole $[0, \text{memSize})$ covering the whole memory.
+  \item \textbf{Search loop}: every hole is tested with \code{canContain(size)}. The variable \code{best} keeps the smallest valid hole found so far; it is replaced only when a strictly smaller valid hole appears.
+  \item \textbf{No valid hole}: if \code{best} is still \code{null} after the loop, there is no hole large enough and the method returns \code{null}. Note that this can happen even if the \emph{total} free memory is larger than the request: this is external fragmentation.
+  \item \textbf{Exact fit}: the hole object itself is removed from the list and handed to the process.
+  \item \textbf{Split}: \code{assignMemory(size)} creates the allocated slot at the old base and updates the hole in place (\code{base += size}, \code{size -= size}), so the list keeps its address ordering without re-sorting.
+  \item \textbf{Complexity}: $O(n)$ in the number of free holes, always (the full list is scanned), whereas First Fit is $O(n)$ in the worst case but can stop early.
+\end{itemize}
+
+\subsection{Results obtained}
+
+\begin{table}[H]
+\centering
+\caption{Best Fit -- Scenario A (program output)}
+\begin{tabular}{ccl}
+\toprule
+Request & Allocated slot & Free holes after the request\\
+\midrule
+90  & $[400, 490)$ & $[0,300)$:300, $[490,500)$:10, $[600,1000)$:400\\
+250 & $[0, 250)$   & $[250,300)$:50, $[490,500)$:10, $[600,1000)$:400\\
+100 & $[600, 700)$ & $[250,300)$:50, $[490,500)$:10, $[700,1000)$:300\\
+120 & $[700, 820)$ & $[250,300)$:50, $[490,500)$:10, $[820,1000)$:180\\
+180 & $[820, 1000)$ (exact fit) & $[250,300)$:50, $[490,500)$:10\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Best Fit -- Scenario B (program output)}
+\begin{tabular}{ccl}
+\toprule
+Request & Allocated slot & Free holes after the request\\
+\midrule
+150 & $[0, 150)$   & $[150,300)$:150, $[400,500)$:100, $[600,1000)$:400\\
+200 & $[600, 800)$ & $[150,300)$:150, $[400,500)$:100, $[800,1000)$:200\\
+250 & \textbf{fails} (\code{null}) & $[150,300)$:150, $[400,500)$:100, $[800,1000)$:200\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Manual verification}
+
+The manual verification was carried out by tracing the free-hole list by hand, without looking at the program output. For each request the following procedure was applied:
+
+\begin{enumerate}
+  \item List the \emph{candidate holes}: the free holes whose size is greater than or equal to the request.
+  \item Apply the rule of the strategy to choose one candidate (for Best Fit, the smallest one).
+  \item Split the chosen hole: the allocated slot starts at the base of the hole, and the leftover hole starts at $\text{base} + \text{request}$ with size $\text{hole size} - \text{request}$. If the leftover is 0, the hole disappears from the list.
+  \item If there are no candidates, the request fails, even if the sum of the free holes is larger than the request.
+\end{enumerate}
+
+As a worked example, consider the first request of Scenario A (90 bytes) under Best Fit. The three holes H1 (300), H2 (100) and H3 (400) are all candidates; the smallest is H2, so the slot $[400, 490)$ is allocated and H2 becomes $[490, 500)$ with $100 - 90 = 10$ bytes. The remaining requests are traced in the same way in the following tables.
+
+\begin{table}[H]
+\centering
+\caption{Manual trace -- Best Fit, Scenario A}
+\begin{tabular}{cccc}
+\toprule
+Request & Candidate holes (size) & Chosen (smallest) & Leftover\\
+\midrule
+90  & H1 (300), H2 (100), H3 (400) & H2 & 10\\
+250 & H1 (300), H3 (400) & H1 & 50\\
+100 & H3 (400) & H3 & 300\\
+120 & H3 (300) & H3 & 180\\
+180 & H3 (180) & H3 (exact) & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Manual trace -- Best Fit, Scenario B}
+\begin{tabular}{cccc}
+\toprule
+Request & Candidate holes (size) & Chosen (smallest) & Leftover\\
+\midrule
+150 & H1 (300), H3 (400) & H1 & 150\\
+200 & H3 (400) & H3 & 200\\
+250 & none (150, 100, 200) & -- & --\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figures \ref{fig:BA} and \ref{fig:BB} show the same traces as memory maps, one row per request, which is how the verification was drawn by hand. In all memory maps, hatched regions are occupied before the test, orange is the slot allocated in that step, blue are slots allocated in earlier steps, and italic numbers are the sizes of the free holes.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.0115cm,y=1cm,font=\scriptsize]
+\memaxis
+\memrow{0}{Initial}
+\hole{150}{0}{300}
+\hole{450}{0}{100}
+\hole{800}{0}{400}
+\memrow{-0.8}{Req 90}
+\newslot{400}{490}{-0.8}{90}
+\hole{150}{-0.8}{300}
+\smallhole{495}{-0.8}{10}
+\hole{800}{-0.8}{400}
+\memrow{-1.6}{Req 250}
+\oldslot{400}{490}{-1.6}{90}
+\newslot{0}{250}{-1.6}{250}
+\hole{275}{-1.6}{50}
+\smallhole{495}{-1.6}{10}
+\hole{800}{-1.6}{400}
+\memrow{-2.4}{Req 100}
+\oldslot{400}{490}{-2.4}{90}
+\oldslot{0}{250}{-2.4}{250}
+\newslot{600}{700}{-2.4}{100}
+\hole{275}{-2.4}{50}
+\smallhole{495}{-2.4}{10}
+\hole{850}{-2.4}{300}
+\memrow{-3.2}{Req 120}
+\oldslot{400}{490}{-3.2}{90}
+\oldslot{0}{250}{-3.2}{250}
+\oldslot{600}{700}{-3.2}{100}
+\newslot{700}{820}{-3.2}{120}
+\hole{275}{-3.2}{50}
+\smallhole{495}{-3.2}{10}
+\hole{910}{-3.2}{180}
+\memrow{-4}{Req 180}
+\oldslot{400}{490}{-4}{90}
+\oldslot{0}{250}{-4}{250}
+\oldslot{600}{700}{-4}{100}
+\oldslot{700}{820}{-4}{120}
+\newslot{820}{1000}{-4}{180}
+\hole{275}{-4}{50}
+\smallhole{495}{-4}{10}
+\end{tikzpicture}
+\caption{Step-by-step memory map (manual trace) -- Best Fit, Scenario A.}
+\label{fig:BA}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.0115cm,y=1cm,font=\scriptsize]
+\memaxis
+\memrow{0}{Initial}
+\hole{150}{0}{300}
+\hole{450}{0}{100}
+\hole{800}{0}{400}
+\memrow{-0.8}{Req 150}
+\newslot{0}{150}{-0.8}{150}
+\hole{225}{-0.8}{150}
+\hole{450}{-0.8}{100}
+\hole{800}{-0.8}{400}
+\memrow{-1.6}{Req 200}
+\oldslot{0}{150}{-1.6}{150}
+\newslot{600}{800}{-1.6}{200}
+\hole{225}{-1.6}{150}
+\hole{450}{-1.6}{100}
+\hole{900}{-1.6}{200}
+\memrow{-2.4}{Req 250 (fails)}
+\oldslot{0}{150}{-2.4}{150}
+\oldslot{600}{800}{-2.4}{200}
+\hole{225}{-2.4}{150}
+\hole{450}{-2.4}{100}
+\hole{900}{-2.4}{200}
+\end{tikzpicture}
+\caption{Step-by-step memory map (manual trace) -- Best Fit, Scenario B.}
+\label{fig:BB}
+\end{figure}
+
+\subsection{Results comparison}
+
+\begin{table}[H]
+\centering
+\caption{Comparison: program vs. manual verification -- Best Fit}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{Scenario A} & \multicolumn{2}{c}{Scenario B}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Indicator & Program & Manual & Program & Manual\\
+\midrule
+Successful allocations & 5/5 & 5/5 & 2/3 & 2/3\\
+Allocated bytes & 740 & 740 & 350 & 350\\
+Remaining free bytes & 60 & 60 & 450 & 450\\
+Number of free holes & 2 & 2 & 3 & 3\\
+Largest free hole & 50 & 50 & 200 & 200\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both sets of results are identical, confirming that \code{BestFitMemorySlotManager} always selects the smallest hole that can contain the request.
+
+\subsection{Summary}
+
+Best Fit meets the expected behavior. In Scenario A it is the only strategy that satisfies all five requests, because it serves the 90-byte request from the 100-byte hole and leaves the 400-byte hole intact for the later large requests. The cost of the policy is also visible: that same decision leaves a 10-byte fragment at $[490, 500)$ that is practically unusable, which is the typical ``splinter'' effect of Best Fit.
+
+% ============================================================
+\section{Worst Fit}
+% ============================================================
+
+\subsection{Design description}
+
+\code{WorstFitMemorySlotManager} also extends \code{FreeMemorySlotManager}; its structure is symmetric to Best Fit, but the selection criterion is reversed. Rules of the implemented policy:
+
+\begin{enumerate}
+  \item \textbf{Full scan}: the whole list of free holes is traversed.
+  \item \textbf{Selection}: among the holes that satisfy \code{canContain(size)}, the one with the \emph{largest} size is kept (ties are resolved in favor of the lowest address, because the comparison is strict, \code{>}).
+  \item \textbf{Exact fit / split / failure}: identical to Best Fit.
+\end{enumerate}
+
+The rationale of Worst Fit is the opposite of Best Fit: by always cutting from the largest hole, the leftover is as large as possible, and therefore more likely to be useful for a future request.
+
+\subsection{Implementation code}
+
+\begin{lstlisting}[caption={WorstFitMemorySlotManager.java -- Worst Fit strategy}]
+public class WorstFitMemorySlotManager extends FreeMemorySlotManager{
+
+    public WorstFitMemorySlotManager(int memSize){
+        super(memSize);
+    }
+
+    @Override
+    public MemorySlot getSlot(int size) {
+        MemorySlot worst = null;
+
+        //Recorremos toda la lista buscando el slot más grande que alcance
+        for (MemorySlot memorySlot : list) {
+            if(memorySlot.canContain(size)){
+                if(worst == null || memorySlot.getSize() > worst.getSize()){
+                    worst = memorySlot;
+                }
+            }
+        }
+
+        if(worst == null){
+            System.out.println("Error: La memoria solicitada es demasiado grande para la memoria disponible");
+            return null;
+        }
+
+        if(worst.getSize() == size){
+            list.remove(worst);
+            return worst;
+        }else{
+            return worst.assignMemory(size);
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Step-by-step description of the code}
+
+\begin{itemize}
+  \item \textbf{Search loop}: the variable \code{worst} keeps the largest valid hole found so far. Since the largest hole of the list is valid whenever \emph{any} hole is valid, the chosen hole is simply the largest hole in memory.
+  \item \textbf{Exact fit and split}: identical to Best Fit, reusing \code{list.remove()} and \code{assignMemory()} from the base classes.
+  \item \textbf{Complexity}: $O(n)$ in the number of free holes, always.
+\end{itemize}
+
+\subsection{Results obtained}
+
+\begin{table}[H]
+\centering
+\caption{Worst Fit -- Scenario A (program output)}
+\begin{tabular}{ccl}
+\toprule
+Request & Allocated slot & Free holes after the request\\
+\midrule
+90  & $[600, 690)$ & $[0,300)$:300, $[400,500)$:100, $[690,1000)$:310\\
+250 & $[690, 940)$ & $[0,300)$:300, $[400,500)$:100, $[940,1000)$:60\\
+100 & $[0, 100)$   & $[100,300)$:200, $[400,500)$:100, $[940,1000)$:60\\
+120 & $[100, 220)$ & $[220,300)$:80, $[400,500)$:100, $[940,1000)$:60\\
+180 & \textbf{fails} (\code{null}) & $[220,300)$:80, $[400,500)$:100, $[940,1000)$:60\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Worst Fit -- Scenario B (program output)}
+\begin{tabular}{ccl}
+\toprule
+Request & Allocated slot & Free holes after the request\\
+\midrule
+150 & $[600, 750)$ & $[0,300)$:300, $[400,500)$:100, $[750,1000)$:250\\
+200 & $[0, 200)$   & $[200,300)$:100, $[400,500)$:100, $[750,1000)$:250\\
+250 & $[750, 1000)$ (exact fit) & $[200,300)$:100, $[400,500)$:100\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Manual verification}
+
+\begin{table}[H]
+\centering
+\caption{Manual trace -- Worst Fit, Scenario A}
+\begin{tabular}{cccc}
+\toprule
+Request & Candidate holes (size) & Chosen (largest) & Leftover\\
+\midrule
+90  & H1 (300), H2 (100), H3 (400) & H3 & 310\\
+250 & H1 (300), H3 (310) & H3 & 60\\
+100 & H1 (300), H2 (100) & H1 & 200\\
+120 & H1 (200) & H1 & 80\\
+180 & none (80, 100, 60) & -- & --\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Manual trace -- Worst Fit, Scenario B}
+\begin{tabular}{cccc}
+\toprule
+Request & Candidate holes (size) & Chosen (largest) & Leftover\\
+\midrule
+150 & H1 (300), H3 (400) & H3 & 250\\
+200 & H1 (300), H3 (250) & H1 & 100\\
+250 & H3 (250) & H3 (exact) & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The memory maps of Figures \ref{fig:WA} and \ref{fig:WB} follow the same procedure used for Best Fit.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.0115cm,y=1cm,font=\scriptsize]
+\memaxis
+\memrow{0}{Initial}
+\hole{150}{0}{300}
+\hole{450}{0}{100}
+\hole{800}{0}{400}
+\memrow{-0.8}{Req 90}
+\newslot{600}{690}{-0.8}{90}
+\hole{150}{-0.8}{300}
+\hole{450}{-0.8}{100}
+\hole{845}{-0.8}{310}
+\memrow{-1.6}{Req 250}
+\oldslot{600}{690}{-1.6}{90}
+\newslot{690}{940}{-1.6}{250}
+\hole{150}{-1.6}{300}
+\hole{450}{-1.6}{100}
+\hole{970}{-1.6}{60}
+\memrow{-2.4}{Req 100}
+\oldslot{600}{690}{-2.4}{90}
+\oldslot{690}{940}{-2.4}{250}
+\newslot{0}{100}{-2.4}{100}
+\hole{200}{-2.4}{200}
+\hole{450}{-2.4}{100}
+\hole{970}{-2.4}{60}
+\memrow{-3.2}{Req 120}
+\oldslot{600}{690}{-3.2}{90}
+\oldslot{690}{940}{-3.2}{250}
+\oldslot{0}{100}{-3.2}{100}
+\newslot{100}{220}{-3.2}{120}
+\hole{260}{-3.2}{80}
+\hole{450}{-3.2}{100}
+\hole{970}{-3.2}{60}
+\memrow{-4}{Req 180 (fails)}
+\oldslot{600}{690}{-4}{90}
+\oldslot{690}{940}{-4}{250}
+\oldslot{0}{100}{-4}{100}
+\oldslot{100}{220}{-4}{120}
+\hole{260}{-4}{80}
+\hole{450}{-4}{100}
+\hole{970}{-4}{60}
+\end{tikzpicture}
+\caption{Step-by-step memory map (manual trace) -- Worst Fit, Scenario A.}
+\label{fig:WA}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.0115cm,y=1cm,font=\scriptsize]
+\memaxis
+\memrow{0}{Initial}
+\hole{150}{0}{300}
+\hole{450}{0}{100}
+\hole{800}{0}{400}
+\memrow{-0.8}{Req 150}
+\newslot{600}{750}{-0.8}{150}
+\hole{150}{-0.8}{300}
+\hole{450}{-0.8}{100}
+\hole{875}{-0.8}{250}
+\memrow{-1.6}{Req 200}
+\oldslot{600}{750}{-1.6}{150}
+\newslot{0}{200}{-1.6}{200}
+\hole{250}{-1.6}{100}
+\hole{450}{-1.6}{100}
+\hole{875}{-1.6}{250}
+\memrow{-2.4}{Req 250}
+\oldslot{600}{750}{-2.4}{150}
+\oldslot{0}{200}{-2.4}{200}
+\newslot{750}{1000}{-2.4}{250}
+\hole{250}{-2.4}{100}
+\hole{450}{-2.4}{100}
+\end{tikzpicture}
+\caption{Step-by-step memory map (manual trace) -- Worst Fit, Scenario B.}
+\label{fig:WB}
+\end{figure}
+
+\subsection{Results comparison}
+
+\begin{table}[H]
+\centering
+\caption{Comparison: program vs. manual verification -- Worst Fit}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{Scenario A} & \multicolumn{2}{c}{Scenario B}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Indicator & Program & Manual & Program & Manual\\
+\midrule
+Successful allocations & 4/5 & 4/5 & 3/3 & 3/3\\
+Allocated bytes & 560 & 560 & 600 & 600\\
+Remaining free bytes & 240 & 240 & 200 & 200\\
+Number of free holes & 3 & 3 & 2 & 2\\
+Largest free hole & 100 & 100 & 100 & 100\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Summary}
+
+Worst Fit meets the expected behavior: it always cuts from the largest hole. In Scenario B this is exactly what makes it the only strategy that satisfies all three requests: after serving 150 bytes from the 400-byte hole, a 250-byte hole remains, which later fits the 250-byte request exactly. In Scenario A, however, the same policy destroys the 400-byte hole with the very first (small) request, and when the 180-byte request arrives there are 240 free bytes but no single hole larger than 100 bytes.
+
+% ============================================================
+\section{Integration test in the full simulator (Scenario 0)}
+% ============================================================
+
+The full simulator was executed with Scenario 0 three times, changing only the constant \code{OS.MSM} (\code{FIRST\_FIT}, \code{BEST\_FIT}, \code{WORST\_FIT}). The three console outputs are \textbf{byte-for-byte identical}. This is the expected result: processes are created at cycles 0, 2, 6 and 8, before any process finishes, so at every allocation the free list contains a single hole and all three strategies are forced to choose it.
+
+\begin{table}[H]
+\centering
+\caption{Evolution of memory in Scenario 0 (identical for the three strategies)}
+\begin{tabular}{clll}
+\toprule
+Cycle & Event & Allocated slot & Free holes after the event\\
+\midrule
+0  & P0 created (975 B)  & $[0, 975)$      & $[975, 1\,048\,576)$\\
+2  & P1 created (200 B)  & $[975, 1175)$   & $[1175, 1\,048\,576)$\\
+6  & P2 created (747 B)  & $[1175, 1922)$  & $[1922, 1\,048\,576)$\\
+8  & P3 created (488 B)  & $[1922, 2410)$  & $[2410, 1\,048\,576)$\\
+19 & P0 finishes & -- & $[0, 975)$, $[2410, 1\,048\,576)$\\
+28 & P1 finishes & -- & $[0, 1175)$, $[2410, 1\,048\,576)$\\
+34 & P2 finishes & -- & $[0, 1922)$, $[2410, 1\,048\,576)$\\
+42 & P3 finishes & -- & $[0, 1\,048\,576)$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The table also validates the reclamation and fusion of holes: each freed slot is merged with the adjacent free hole, and at the end the whole memory becomes a single free hole again.
+
+The run also validates address translation with base/limit. At the end of the simulation, the only non-zero bytes of physical memory are:
+
+\begin{itemize}
+  \item Address 1061 with value 38: P1 stores at logical address 86, and $975 + 86 = 1061$.
+  \item Address 2225 with value 42: P3 stores at logical address 303, and $1922 + 303 = 2225$.
+\end{itemize}
+
+To make the integration test meaningful for comparing strategies, processes must finish and leave holes \emph{before} new processes arrive; this is precisely what Scenarios A and B reproduce in a controlled way.
+
+% ============================================================
+\section{General comparison among the three strategies}
+% ============================================================
+
+\subsection{Baseline: manual trace of First Fit}
+
+To compare the new strategies against the existing one, the same scenarios were traced by hand for First Fit, whose rule is to choose the \emph{first} candidate hole in address order.
+
+\begin{table}[H]
+\centering
+\caption{Manual trace -- First Fit, Scenario A}
+\begin{tabular}{cccc}
+\toprule
+Request & Candidate holes (size) & Chosen (first) & Leftover\\
+\midrule
+90  & H1 (300), H2 (100), H3 (400) & H1 & 210\\
+250 & H3 (400) & H3 & 150\\
+100 & H1 (210), H2 (100), H3 (150) & H1 & 110\\
+120 & H3 (150) & H3 & 30\\
+180 & none (110, 100, 30) & -- & --\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Manual trace -- First Fit, Scenario B}
+\begin{tabular}{cccc}
+\toprule
+Request & Candidate holes (size) & Chosen (first) & Leftover\\
+\midrule
+150 & H1 (300), H3 (400) & H1 & 150\\
+200 & H3 (400) & H3 & 200\\
+250 & none (150, 100, 200) & -- & --\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.0115cm,y=1cm,font=\scriptsize]
+\memaxis
+\memrow{0}{Initial}
+\hole{150}{0}{300}
+\hole{450}{0}{100}
+\hole{800}{0}{400}
+\memrow{-0.8}{Req 90}
+\newslot{0}{90}{-0.8}{90}
+\hole{195}{-0.8}{210}
+\hole{450}{-0.8}{100}
+\hole{800}{-0.8}{400}
+\memrow{-1.6}{Req 250}
+\oldslot{0}{90}{-1.6}{90}
+\newslot{600}{850}{-1.6}{250}
+\hole{195}{-1.6}{210}
+\hole{450}{-1.6}{100}
+\hole{925}{-1.6}{150}
+\memrow{-2.4}{Req 100}
+\oldslot{0}{90}{-2.4}{90}
+\oldslot{600}{850}{-2.4}{250}
+\newslot{90}{190}{-2.4}{100}
+\hole{245}{-2.4}{110}
+\hole{450}{-2.4}{100}
+\hole{925}{-2.4}{150}
+\memrow{-3.2}{Req 120}
+\oldslot{0}{90}{-3.2}{90}
+\oldslot{600}{850}{-3.2}{250}
+\oldslot{90}{190}{-3.2}{100}
+\newslot{850}{970}{-3.2}{120}
+\hole{245}{-3.2}{110}
+\hole{450}{-3.2}{100}
+\smallhole{985}{-3.2}{30}
+\memrow{-4}{Req 180 (fails)}
+\oldslot{0}{90}{-4}{90}
+\oldslot{600}{850}{-4}{250}
+\oldslot{90}{190}{-4}{100}
+\oldslot{850}{970}{-4}{120}
+\hole{245}{-4}{110}
+\hole{450}{-4}{100}
+\smallhole{985}{-4}{30}
+\end{tikzpicture}
+\caption{Step-by-step memory map (manual trace) -- First Fit, Scenario A.}
+\label{fig:FA}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.0115cm,y=1cm,font=\scriptsize]
+\memaxis
+\memrow{0}{Initial}
+\hole{150}{0}{300}
+\hole{450}{0}{100}
+\hole{800}{0}{400}
+\memrow{-0.8}{Req 150}
+\newslot{0}{150}{-0.8}{150}
+\hole{225}{-0.8}{150}
+\hole{450}{-0.8}{100}
+\hole{800}{-0.8}{400}
+\memrow{-1.6}{Req 200}
+\oldslot{0}{150}{-1.6}{150}
+\newslot{600}{800}{-1.6}{200}
+\hole{225}{-1.6}{150}
+\hole{450}{-1.6}{100}
+\hole{900}{-1.6}{200}
+\memrow{-2.4}{Req 250 (fails)}
+\oldslot{0}{150}{-2.4}{150}
+\oldslot{600}{800}{-2.4}{200}
+\hole{225}{-2.4}{150}
+\hole{450}{-2.4}{100}
+\hole{900}{-2.4}{200}
+\end{tikzpicture}
+\caption{Step-by-step memory map (manual trace) -- First Fit, Scenario B.}
+\label{fig:FB}
+\end{figure}
+
+Figures \ref{fig:FA} and \ref{fig:FB} show the corresponding memory maps. The program output of \code{PruebaEstrategias.java} for First Fit matches these traces exactly (same allocated slots and same final free holes).
+
+\subsection{Comparison of indicators}
+
+\begin{table}[H]
+\centering
+\caption{Comparison of indicators (800 free bytes at the start of each scenario)}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{Scenario A} & \multicolumn{3}{c}{Scenario B}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Indicator & First & Best & Worst & First & Best & Worst\\
+\midrule
+Successful allocations & 4/5 & \textbf{5/5} & 4/5 & 2/3 & 2/3 & \textbf{3/3}\\
+Allocated bytes & 560 & \textbf{740} & 560 & 350 & 350 & \textbf{600}\\
+Use of free memory & 70.0\% & \textbf{92.5\%} & 70.0\% & 43.8\% & 43.8\% & \textbf{75.0\%}\\
+Remaining free bytes & 240 & 60 & 240 & 450 & 450 & 200\\
+Free holes at the end & 3 & 2 & 3 & 3 & 3 & 2\\
+Largest free hole & 110 & 50 & 100 & 200 & 200 & 100\\
+Smallest fragment & 30 & 10 & 60 & 100 & 100 & 100\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+``Use of free memory'' is the ratio between allocated bytes and the 800 bytes that were free at the beginning.
+
+The two scenarios were designed so that each new strategy wins in one of them, which shows that no strategy is universally better:
+
+\begin{itemize}
+  \item \textbf{Best Fit} wins when requests of very different sizes arrive and a large hole must be preserved for a later large request (Scenario A). Its weakness is the generation of tiny, useless fragments (10 bytes in Scenario A).
+  \item \textbf{Worst Fit} wins when requests are of similar, medium size, because the leftover of the largest hole remains large enough to be reused (Scenario B). Its weakness is that it quickly destroys large holes, so a later large request can fail (Scenario A).
+  \item \textbf{First Fit} behaves in between: in Scenario A it matches Worst Fit and in Scenario B it matches Best Fit. Its advantage is not the quality of the placement but the speed of the search, since it can stop at the first valid hole instead of scanning the whole list.
+\end{itemize}
+
+In all cases where a request failed, the total free memory was larger than the request (for example, 240 free bytes versus a 180-byte request in Scenario A for First and Worst Fit). This is the definition of \textbf{external fragmentation}: enough memory exists, but not in a single contiguous hole. None of the three strategies eliminates it; they only change how it is distributed. This agrees with the literature, where simulations show that First Fit and Best Fit are generally better than Worst Fit in memory utilization, and First Fit is usually faster \cite{silberschatz}.
+
+% ============================================================
+\section{Observations on the base code}
+% ============================================================
+
+While analyzing and testing the simulator, the following points were identified. They belong to the base code, not to the strategies implemented in this deliverable, but they affect the behavior of any free memory strategy:
+
+\begin{enumerate}
+  \item \textbf{Merging of non-adjacent holes in \code{returnMemorySlot()}}. When the returned slot lies after the last free hole, the branch \code{list.getLast().addSlot(m)} adds its size to the last hole without checking that both are adjacent. For example, with a single free hole $[0, 100)$, returning the slot $[500, 550)$ produces the hole $[0, 150)$ instead of two separate holes. This was reproduced with the real class. A possible fix is to always insert the slot in order (\code{list.add(i+1, m)}) and let \code{fuseSlots()} decide whether it must be merged.
+  \item \textbf{Aliasing of the returned slot}. The \code{MemorySlot} object of the finished process is inserted directly into the free list; when \code{fuseSlots()} later merges holes, it modifies that same object. As a consequence, at the end of Scenario 0 the memory manager of P0 reports a slot of size $1\,048\,576$. Inserting a copy (\code{new MemorySlot(m)}) would avoid this side effect.
+  \item \textbf{Default configuration}. The repository keeps \code{MSM = FIRST\_FIT} in \code{OS.java}; to run the new strategies, this constant must be changed to \code{BEST\_FIT} or \code{WORST\_FIT}.
+\end{enumerate}
+
+% ============================================================
+\section{General conclusions}
+% ============================================================
+
+\begin{enumerate}
+  \item The implementations of \code{BestFitMemorySlotManager.java} and \code{WorstFitMemorySlotManager.java} select, in every tested case, exactly the hole predicted by their definitions, as confirmed by the match between the program output and the manual trace of the free-hole list in both fragmentation scenarios.
+  \item The simulator's modular design made the extension straightforward: since the list management (splitting with \code{assignMemory}, reclamation and fusion) is inherited from \code{FreeMemorySlotManager}, each new strategy only had to implement the selection rule in \code{getSlot()}, and it is automatically used both for main memory and for swap memory.
+  \item The integration test shows that the three strategies only differ when memory is already fragmented (more than one free hole at allocation time); with the default scenario of the simulator they produce identical results, so specific fragmentation scenarios are needed to evaluate them.
+  \item The choice of strategy depends on the expected workload: Best Fit is preferable when request sizes vary widely and large holes must be preserved; Worst Fit when requests are of similar size; and First Fit when allocation speed matters most. In every case external fragmentation persists, which motivates non-contiguous techniques such as paging and segmentation.
+\end{enumerate}
+
+% ============================================================
+\begin{thebibliography}{9}
+\bibitem{wightman} Wightman, P. \emph{UR-OS Operating Systems Simulator in Java}. Universidad del Rosario.
+\bibitem{silberschatz} Silberschatz, A., Galvin, P. B., \& Gagne, G. \emph{Operating System Concepts}. Wiley. Chapter ``Main Memory'', section on contiguous memory allocation.
+\bibitem{tanenbaum} Tanenbaum, A. S., \& Woodhull, A. S. \emph{Operating Systems Design and Implementation}, 3rd ed. Pearson, 2007.
+\bibitem{repo} \url{https://github.com/DavidAlejandroLibreros/Entrega-Segundo-Corte-Operating-Systems}.
+\end{thebibliography}
+
+\end{document}
