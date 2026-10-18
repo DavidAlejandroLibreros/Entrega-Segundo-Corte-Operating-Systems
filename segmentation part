@@ -1,0 +1,77 @@
+package ur_os.memory.freememorymagament;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+
+public class PruebaEstrategias {
+
+    //Construye un manager cuyos huecos libres son exactamente los indicados: {base, tamaño}
+    private static FreeMemorySlotManager build(String type, int memSize, int[][] holes){
+        FreeMemorySlotManager m;
+        switch(type){
+            case "FIRST":      m = new FirstFitMemorySlotManager(memSize); break;
+            case "BEST":       m = new BestFitMemorySlotManager(memSize); break;
+            case "WORST":      m = new WorstFitMemorySlotManager(memSize); break;
+            default:           m = new SegregatedFitMemorySlotManager(memSize); break;
+        }
+        m.list.clear();
+        for (int[] h : holes) {
+            m.list.add(new MemorySlot(h[0], h[1]));
+        }
+        return m;
+    }
+
+    private static String holesToString(FreeMemorySlotManager m){
+        StringBuilder sb = new StringBuilder();
+        for (MemorySlot s : m.list) {
+            if(sb.length() > 0) sb.append(", ");
+            sb.append("[").append(s.getBase()).append(",").append(s.getBase()+s.getSize()).append("):").append(s.getSize());
+        }
+        return sb.toString();
+    }
+
+    private static void run(String scenario, String type, int memSize, int[][] holes, int[] requests){
+        FreeMemorySlotManager m = build(type, memSize, holes);
+        int initialFree = FragmentationCalculator.getTotalFreeMemory(m);
+        int ok = 0, allocated = 0;
+        for (int req : requests) {
+            MemorySlot r = m.getSlot(req);
+            String res;
+            if(r == null){
+                res = "FAIL";
+            }else{
+                res = "[" + r.getBase() + "," + (r.getBase()+r.getSize()) + ")";
+                ok++;
+                allocated += req;
+            }
+            System.out.println("STEP|" + scenario + "|" + type + "|" + req + "|" + res + "|" + holesToString(m));
+        }
+        int smallest = Integer.MAX_VALUE;
+        for (MemorySlot s : m.list) smallest = Math.min(smallest, s.getSize());
+        if(m.list.isEmpty()) smallest = 0;
+        System.out.println("SUM|" + scenario + "|" + type + "|" + ok + "/" + requests.length + "|" + allocated + "|" + initialFree
+            + "|" + FragmentationCalculator.getTotalFreeMemory(m) + "|" + m.getSize() + "|" + FragmentationCalculator.getLargestFreeSlot(m)
+            + "|" + smallest + "|" + FragmentationCalculator.calcExternalFragmentation(m));
+    }
+
+    public static void main(String[] args) {
+        String[] types = {"FIRST", "BEST", "WORST", "SEGREGATED"};
+
+        //Memoria de 1000 bytes: H1 [0,300) libre, H2 [400,500) libre, H3 [600,1000) libre
+        int[][] holesAB = {{0,300},{400,100},{600,400}};
+        int[] reqA = {90, 250, 100, 120, 180};
+        int[] reqB = {150, 200, 250};
+
+        //Escenario C: H1 [0,250), H2 [300,430) y H3 [500,1000)
+        int[][] holesC = {{0,250},{300,130},{500,500}};
+        int[] reqC = {120, 130, 250, 100};
+
+        for (String t : types) {
+            run("A", t, 1000, holesAB, reqA);
+            run("B", t, 1000, holesAB, reqB);
+            run("C", t, 1000, holesC, reqC);
+        }
+    }
+}
