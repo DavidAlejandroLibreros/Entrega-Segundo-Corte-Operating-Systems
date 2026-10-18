@@ -1,0 +1,271 @@
+diff --git a/src/ur_os/memory/freememorymagament/PruebaEstrategias.java b/src/ur_os/memory/freememorymagament/PruebaEstrategias.java
+new file mode 100644
+index 0000000..2126ccd
+--- /dev/null
++++ b/src/ur_os/memory/freememorymagament/PruebaEstrategias.java
+@@ -0,0 +1,81 @@
++package ur_os.memory.freememorymagament;
++
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.List;
++
++/**
++ * Prueba controlada de las cuatro estrategias de memoria libre sobre una
++ * memoria ya fragmentada. Usa las clases reales del simulador y emite una
++ * salida fácil de parsear: una línea por solicitud.
++ */
++public class PruebaEstrategias {
++
++    //Construye un manager cuyos huecos libres son exactamente los indicados: {base, tamaño}
++    private static FreeMemorySlotManager build(String type, int memSize, int[][] holes){
++        FreeMemorySlotManager m;
++        switch(type){
++            case "FIRST":      m = new FirstFitMemorySlotManager(memSize); break;
++            case "BEST":       m = new BestFitMemorySlotManager(memSize); break;
++            case "WORST":      m = new WorstFitMemorySlotManager(memSize); break;
++            default:           m = new SegregatedFitMemorySlotManager(memSize); break;
++        }
++        m.list.clear();
++        for (int[] h : holes) {
++            m.list.add(new MemorySlot(h[0], h[1]));
++        }
++        return m;
++    }
++
++    private static String holesToString(FreeMemorySlotManager m){
++        StringBuilder sb = new StringBuilder();
++        for (MemorySlot s : m.list) {
++            if(sb.length() > 0) sb.append(", ");
++            sb.append("[").append(s.getBase()).append(",").append(s.getBase()+s.getSize()).append("):").append(s.getSize());
++        }
++        return sb.toString();
++    }
++
++    private static void run(String scenario, String type, int memSize, int[][] holes, int[] requests){
++        FreeMemorySlotManager m = build(type, memSize, holes);
++        int initialFree = FragmentationCalculator.getTotalFreeMemory(m);
++        int ok = 0, allocated = 0;
++        for (int req : requests) {
++            MemorySlot r = m.getSlot(req);
++            String res;
++            if(r == null){
++                res = "FAIL";
++            }else{
++                res = "[" + r.getBase() + "," + (r.getBase()+r.getSize()) + ")";
++                ok++;
++                allocated += req;
++            }
++            System.out.println("STEP|" + scenario + "|" + type + "|" + req + "|" + res + "|" + holesToString(m));
++        }
++        int smallest = Integer.MAX_VALUE;
++        for (MemorySlot s : m.list) smallest = Math.min(smallest, s.getSize());
++        if(m.list.isEmpty()) smallest = 0;
++        System.out.println("SUM|" + scenario + "|" + type + "|" + ok + "/" + requests.length + "|" + allocated + "|" + initialFree
++            + "|" + FragmentationCalculator.getTotalFreeMemory(m) + "|" + m.getSize() + "|" + FragmentationCalculator.getLargestFreeSlot(m)
++            + "|" + smallest + "|" + FragmentationCalculator.calcExternalFragmentation(m));
++    }
++
++    public static void main(String[] args) {
++        String[] types = {"FIRST", "BEST", "WORST", "SEGREGATED"};
++
++        //Memoria de 1000 bytes: H1 [0,300) libre, H2 [400,500) libre, H3 [600,1000) libre
++        int[][] holesAB = {{0,300},{400,100},{600,400}};
++        int[] reqA = {90, 250, 100, 120, 180};
++        int[] reqB = {150, 200, 250};
++
++        //Escenario C: H1 [0,250), H2 [300,430) y H3 [500,1000)
++        int[][] holesC = {{0,250},{300,130},{500,500}};
++        int[] reqC = {120, 130, 250, 100};
++
++        for (String t : types) {
++            run("A", t, 1000, holesAB, reqA);
++            run("B", t, 1000, holesAB, reqB);
++            run("C", t, 1000, holesC, reqC);
++        }
++    }
++}
+diff --git a/src/ur_os/memory/segmentation/SMM_Segmentation.java b/src/ur_os/memory/segmentation/SMM_Segmentation.java
+index 09c646d..0994613 100644
+--- a/src/ur_os/memory/segmentation/SMM_Segmentation.java
++++ b/src/ur_os/memory/segmentation/SMM_Segmentation.java
+@@ -28,8 +28,11 @@ public class SMM_Segmentation extends SystemMemoryManager{
+         if(pmm.getType() == MemoryManagerType.SEGMENTATION){
+             PMM_Segmentation pmms = (PMM_Segmentation)pmm;
+ 
+-            //INCLUDE THE STORE VALUE TO MARK DIRTY THE SEGMENT
+-            MemoryAddress la = pmms.getSegmentMemoryAddressFromLocalAddress(logicalAddress);
++            //El valor de store marca el segmento como dirty
++            MemoryAddress la = pmms.getSegmentMemoryAddressFromLocalAddress(logicalAddress, store);
++            if(la.getDivision() < 0){
++                return -1; //Dirección fuera del proceso
++            }
+             MemoryAddress pa = pmms.getPhysicalMemoryAddressFromLogicalMemoryAddress(la);
+ 
+             return pa.getAddress();
+diff --git a/src/ur_os/memory/segmentation/SegmentTable.java b/src/ur_os/memory/segmentation/SegmentTable.java
+index 78e7e00..8e423f1 100644
+--- a/src/ur_os/memory/segmentation/SegmentTable.java
++++ b/src/ur_os/memory/segmentation/SegmentTable.java
+@@ -38,8 +38,7 @@ public class SegmentTable {
+         this.programSize = programSize;
+         this.segmentNumber = segmentNumber;
+         segmentTable = new ArrayList(segmentNumber); 
+-        //r = new Random(SystemOS.SEED_SEGMENTS);
+-        r = new Random();
++        r = new Random(SystemOS.SEED_SEGMENTS); //Semilla fija: tabla de segmentos reproducible
+         if(auto)
+             createSegments();
+     }
+@@ -82,11 +81,30 @@ public class SegmentTable {
+         return segmentTable;
+     }
+     
++    /*Traduce una dirección local (lineal, de 0 a programSize-1) a (segmento, offset).
++      Los segmentos se asumen consecutivos en el espacio lógico del proceso, en el orden
++      de la tabla: el segmento i empieza donde termina el segmento i-1.*/
+     public MemoryAddress getSegmentMemoryAddressFromLocalAddress(int locAdd, boolean store){
+         int segment = -1;
+         int offset = -1;
+         
+-        //Include your code here
++        if(locAdd >= 0){
++            int start = 0; //Dirección local donde empieza el segmento actual
++            for (int i = 0; i < segmentTable.size(); i++) {
++                int limit = segmentTable.get(i).getLimit();
++                if(locAdd < start + limit){
++                    segment = i;
++                    offset = locAdd - start;
++                    break;
++                }
++                start += limit;
++            }
++        }
++        
++        if(segment == -1){
++            System.out.println("Error - Illegal Memory Address Request: local address "+locAdd+" is outside the process");
++            return new MemoryAddress(-1, 0);
++        }
+         
+         //For Virtual Memory
+         if(store){
+@@ -97,11 +115,24 @@ public class SegmentTable {
+         return new MemoryAddress(segment, offset);
+     }
+     
++    /*Traduce (segmento, offset) a dirección física: base del segmento + offset,
++      rechazando el acceso si el offset es >= limit (violación de segmento)*/
+     public MemoryAddress getPhysicalMemoryAddressFromLogicalMemoryAddress(MemoryAddress m){
++        int segment = m.getDivision();
++        int offset = m.getOffset();
+         
+-        //Include your code here
++        if(segment < 0 || segment >= segmentTable.size()){
++            System.out.println("Error - Illegal memory access: segment "+segment+" does not exist");
++            return new MemoryAddress(-1, 0);
++        }
++        
++        SegmentTableEntry ste = segmentTable.get(segment);
++        if(offset < 0 || offset >= ste.getLimit()){
++            System.out.println("Error - Segmentation fault: offset "+offset+" >= limit "+ste.getLimit()+" in segment "+segment);
++            return new MemoryAddress(-1, 0);
++        }
+         
+-        return new MemoryAddress(-1, -1);
++        return new MemoryAddress(ste.getBase(), offset); //getAddress() = base + offset
+     }
+     
+     public SegmentTableEntry getSegment(int i){
+diff --git a/src/ur_os/system/OS.java b/src/ur_os/system/OS.java
+index 4283b68..852fb35 100644
+--- a/src/ur_os/system/OS.java
++++ b/src/ur_os/system/OS.java
+@@ -360,7 +360,12 @@ public class OS {
+         for (int i = 0; i < ptSize; i++) {
+             limit = pmm.getSegment(i).getLimit();
+             m = this.getMemorySlot(limit);
+-            pmm.getSegment(i).setMemorySlot(m);
++            if(m != null){
++                pmm.getSegment(i).setMemorySlot(m);
++                pmm.getSegment(i).setValid(true);
++            }else{
++                System.out.println("Error - No free slot for segment "+i+" of process "+p.getPid()+" (limit "+limit+")");
++            }
+         }
+     }
+     
+diff --git a/src/ur_os/system/SystemOS.java b/src/ur_os/system/SystemOS.java
+index 137d4c5..80aa68f 100644
+--- a/src/ur_os/system/SystemOS.java
++++ b/src/ur_os/system/SystemOS.java
+@@ -67,7 +67,7 @@ public class SystemOS implements Runnable{
+         //initSimulationQueueSimpler2();
+         //initSimulationQueueSimpler3();
+         //initSimulationPropio();
+-        initSimulationPropioPaging();
++        initSimulationPropioSegmentation();
+ 
+         showProcesses();
+         this.simType = simType;
+@@ -418,6 +418,61 @@ public class SystemOS implements Runnable{
+     }
+     
+     
++    // Para ejecutarlo cambiar: MEMORY_SIZE = 512
++    // SMM = MemoryManagerType.SEGMENTATION y MSM = FIRST_FIT / BEST_FIT / WORST_FIT / SEGREGATED_FIT
++    public void initSimulationPropioSegmentation(){
++ 
++        Process p;
++        Instruction temp;
++ 
++        //Proceso 0: pequeño y de vida corta
++        p = new Process(0,0);
++        p.setSize(100);
++        p.addCPUInstructions(1);
++        temp = new MemoryInstruction(MemoryOperationType.STORE, 70, (byte)1, 5);
++        p.addInstruction(temp);
++        p.addCPUInstructions(1);
++        temp = new EndInstruction();
++        p.addInstruction(temp);
++        processes.add(p);
++ 
++        //Proceso 1: grande y de vida larga (queda ocupando memoria)
++        p = new Process(1,1);
++        p.setSize(150);
++        p.addCPUInstructions(1);
++        temp = new MemoryInstruction(MemoryOperationType.STORE, 120, (byte)2, 60);
++        p.addInstruction(temp);
++        p.addCPUInstructions(1);
++        temp = new EndInstruction();
++        p.addInstruction(temp);
++        processes.add(p);
++ 
++        //Proceso 2: pequeño y de vida corta
++        p = new Process(2,2);
++        p.setSize(80);
++        p.addCPUInstructions(1);
++        temp = new MemoryInstruction(MemoryOperationType.STORE, 40, (byte)3, 5);
++        p.addInstruction(temp);
++        p.addCPUInstructions(1);
++        temp = new EndInstruction();
++        p.addInstruction(temp);
++        processes.add(p);
++ 
++        //Proceso 3: llega cuando P0 y P2 ya terminaron, la memoria está fragmentada
++        p = new Process(3,30);
++        p.setSize(120);
++        p.addCPUInstructions(1);
++        temp = new MemoryInstruction(MemoryOperationType.STORE, 100, (byte)4, 5);
++        p.addInstruction(temp);
++        p.addCPUInstructions(1);
++        temp = new EndInstruction();
++        p.addInstruction(temp);
++        processes.add(p);
++ 
++        clock = 0;
++    }
++
++    
+     public boolean isSimulationFinished(){
+         
+         boolean finished = true;
