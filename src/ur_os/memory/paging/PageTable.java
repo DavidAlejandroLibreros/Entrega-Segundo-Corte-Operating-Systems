@@ -34,7 +34,7 @@ public class PageTable {
     public PageTable(int programSize, int assignedPages, boolean virtualMemory){
         this.programSize = programSize;
         this.virtualMemory = virtualMemory;
-        this.size = java.lang.Math.floorDiv(programSize,OS.PAGE_SIZE)+1;
+        this.size = java.lang.Math.ceilDiv(programSize, OS.PAGE_SIZE);
         this.assignedPages = assignedPages;
         this.pageTable = new ArrayList(size); 
     }
