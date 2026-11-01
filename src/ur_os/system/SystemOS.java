@@ -423,6 +423,7 @@ public class SystemOS implements Runnable{
     // Para probarlo SMM = MemoryManagerType.PAGING (En OS.Java)
     // Dejar FRAMES_PER_PROCESS = 3 (En OS.java tambien)
     // Cambiar también PVMM = ProcessVirtualMemoryManagerType.LFU (En OS.java) (o LRU, FIFO, MFU)
+    // Poner VIRTUAL_MEMORY_MODE_ON = TRUE (En OS.java)
     // Para probarlo y usar el Virtual Memory
     public void initSimulationVirtualMemory(){
  
