@@ -61,7 +61,7 @@ public class FreeFramesManager extends FreeMemoryManager{
         ArrayList<PageTableEntry> pteList = pmm.getPT().getList();
         
         for (PageTableEntry pte : pteList) {
-            if(pte.getFrameId() != -1){
+            if(pte.isValid() && pte.getFrameId() != -1){
                 this.freeFrames.add(pte.getFrameId());
             }
         }

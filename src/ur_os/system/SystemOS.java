@@ -20,6 +20,7 @@ import ur_os.process.IOInstruction;
 import ur_os.process.Instruction;
 import ur_os.virtualmemory.SwapMemory;
 import ur_os.memory.freememorymagament.FragmentationCalculator;
+import ur_os.virtualmemory.PageFaultCounter;
 
 /**
  *
@@ -67,7 +68,8 @@ public class SystemOS implements Runnable{
         //initSimulationQueueSimpler2();
         //initSimulationQueueSimpler3();
         //initSimulationPropio();
-        initSimulationPropioPaging();
+        //initSimulationPropioPaging();
+        initSimulationVirtualMemory();
 
         showProcesses();
         this.simType = simType;
@@ -416,7 +418,32 @@ public class SystemOS implements Runnable{
  
         clock = 0;
     }
-    
+
+    // Para ejeuctarlo cambiar: MEMORY_SIZE = 512
+    // Para probarlo SMM = MemoryManagerType.PAGING (En OS.Java)
+    // Dejar FRAMES_PER_PROCESS = 3 (En OS.java tambien)
+    // Cambiar también PVMM = ProcessVirtualMemoryManagerType.LFU (En OS.java) (o LRU, FIFO, MFU)
+    // Para probarlo y usar el Virtual Memory
+    public void initSimulationVirtualMemory(){
+ 
+        Process p;
+        Instruction temp;
+        int[] addresses = {10, 70, 140, 20, 30, 200, 80, 270}; 
+ 
+        p = new Process(0,0);
+        p.setSize(300); // 5 pages
+        p.addCPUInstructions(1);
+        for (int i = 0; i < addresses.length; i++) {
+            temp = new MemoryInstruction(MemoryOperationType.STORE, addresses[i], (byte)(i+1), 2);
+            p.addInstruction(temp);
+            p.addCPUInstructions(1);
+        }
+        temp = new EndInstruction();
+        p.addInstruction(temp);
+        processes.add(p);
+ 
+        clock = 0;
+    }
     
     public boolean isSimulationFinished(){
         
@@ -519,6 +546,7 @@ public class SystemOS implements Runnable{
         System.out.println("Average Waiting Time: "+this.calcAvgWaitingTime());
         System.out.println("Average Context Switches: "+this.calcAvgContextSwitches());
         System.out.println("Average Response Time: "+this.calcAvgResponseTime());
+        PageFaultCounter.show();
         
         showProcesses();
         memory.showNotNullBytes();

@@ -58,7 +58,7 @@ public class OS {
     public static final MemoryManagerType SMM = MemoryManagerType.PAGING;
     public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.FIRST_FIT;
     
-    public static final ProcessVirtualMemoryManagerType PVMM = ProcessVirtualMemoryManagerType.LRU;
+    public static final ProcessVirtualMemoryManagerType PVMM = ProcessVirtualMemoryManagerType.LFU;
     public static final int FRAMES_PER_PROCESS = 3; //Maximum number of frames assigned to a process, if virtual memory is on
     public static final boolean VIRTUAL_MEMORY_MODE_ON = false; //Maximum number of frames assigned to a process, if virtual memory is on
     
@@ -395,6 +395,7 @@ public class OS {
         
         if(VIRTUAL_MEMORY_MODE_ON){
             pmmp.setFrameID(0, freeFrames.getFrame()); //Assign the first page to a frame and it becomes valid
+            PageFaultCounter.add(p.getPid()); //The first load of the first page is a compulsory page fault
         }
         
     }

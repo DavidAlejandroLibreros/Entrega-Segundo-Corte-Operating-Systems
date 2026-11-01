@@ -10,6 +10,7 @@ import ur_os.memory.ProcessMemoryManager;
 import ur_os.memory.SystemMemoryManager;
 import ur_os.system.InterruptType;
 import ur_os.system.OS;
+import ur_os.virtualmemory.PageFaultCounter;
 
 /**
  *
@@ -39,7 +40,7 @@ public class SMM_Paging extends SystemMemoryManager{
             //Only valid for Virtual Memory
             if(pa == null){
                 //There was a page fault, so the page needs to be brought to memory from swap
-                
+                PageFaultCounter.add(pmmp.getProcess().getPid()); //Cuenta el Page Fault para el proceso que lo genero
                 int pageVictim = pmmp.getVictim(); //Find a page that needs to leave memory if there is no space
                 int frameVictimInSwap;
                 
@@ -58,12 +59,12 @@ public class SMM_Paging extends SystemMemoryManager{
                 
                 MemoryPageExchange mpe = new MemoryPageExchange(pageVictim, frameVictimInSwap, frameVictim, pageToLoad, frameToLoadInSwap);
                 
-                if(pageVictim != -1){ //If there was a page identified to leave memory, then it may have to be sent to swap memory
-                    if(pmmp.isPageDirty(pageVictim)){ //If the page is dirty, then it must be updated in the swap memory
-                        mpe.setFullExchange(true); //This is a full exchange, so the frame does not have to be freed
-                        getOS().interrupt(InterruptType.STORE_PAGE, pmmp.getProcess(),mpe); //Send the frame in memory of page la to swap memory. All the information needed is in mpe
-                        pmmp.setPageValid(mpe.getFrameVictim(),false); //Set the newly unloaded page as invalid
+                if(pageVictim != -1){
+                    if(pmmp.isPageDirty(pageVictim)){
+                        mpe.setFullExchange(true);
+                        getOS().interrupt(InterruptType.STORE_PAGE, pmmp.getProcess(),mpe);
                     }
+                    pmmp.setPageValid(pageVictim,false); //Set the unloaded page as invalid, whether it was dirty or not
                 }
                 
                 getOS().interrupt(InterruptType.LOAD_PAGE, pmmp.getProcess(),mpe); //Load the frame in swap of page la to real memory
