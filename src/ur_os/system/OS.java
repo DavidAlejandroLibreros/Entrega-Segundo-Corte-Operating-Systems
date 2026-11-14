@@ -58,7 +58,7 @@ public class OS {
     public static final MemoryManagerType SMM = MemoryManagerType.PAGING;
     public static final FreeMemorySlotManagerType MSM = FreeMemorySlotManagerType.FIRST_FIT;
     
-    public static final ProcessVirtualMemoryManagerType PVMM = ProcessVirtualMemoryManagerType.LFU;
+    public static final ProcessVirtualMemoryManagerType PVMM = ProcessVirtualMemoryManagerType.FIFOCLEAN;
     public static final int FRAMES_PER_PROCESS = 3; //Maximum number of frames assigned to a process, if virtual memory is on
     public static final boolean VIRTUAL_MEMORY_MODE_ON = true; //Maximum number of frames assigned to a process, if virtual memory is on
     
@@ -323,6 +323,10 @@ public class OS {
         switch(PVMM){//Assign the Process Virtual Memory Manager, to support the selection of the victim memory division
             case FIFO:
                 p.getPMM().setPVMM(new PVMM_FIFO());
+            break;
+            
+            case FIFOCLEAN:
+                p.getPMM().setPVMM(new PVMM_FIFOCLEAN());
             break;
 
             case LRU:
